@@ -17,18 +17,17 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public User registerUser(@RequestBody User user){
+    public User registerUser(@RequestBody User user) {
         return userService.registerUser(user);
     }
 
     @PostMapping("/login")
-    public User loginUser(@RequestBody User user){
+    public String loginUser(@RequestBody User user) {
         return userService.loginUser(user.getEmail(), user.getPassword());
     }
 
     @GetMapping
-    public List<User> getAllUsers()
-    {
+    public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
 }

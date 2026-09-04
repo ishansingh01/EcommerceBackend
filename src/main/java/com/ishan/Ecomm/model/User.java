@@ -13,8 +13,10 @@ public class User {
     private Long id;
 
     private String name;
+    @Column(unique = true)
     private String email;
     private String password;
+    private String role;
 
     @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
@@ -55,8 +57,13 @@ public class User {
     public List<Orders> getOrdersList() {
         return ordersList;
     }
-
     public void setOrdersList(List<Orders> ordersList) {
         this.ordersList = ordersList;
+    }
+    public String getRole(){
+        return role;
+    }
+    public void setRole(String role){
+        this.role = role;
     }
 }

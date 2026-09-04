@@ -28,9 +28,11 @@ public class OrderService {
     @Autowired
     private OrderRepository orderRepository;
 
-    public OrderDTO placeOrder(Long userId, Map<Long, Integer> productQuantities, double totalAmount) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));// java 8 use instead of try catch
+    public OrderDTO placeOrder(String email, Map<Long, Integer> productQuantities, double totalAmount) {
+        User user = userRepository.findByEmail(email);
+        if(user==null){
+            throw new RuntimeException("User Not Found");
+        }
 
         Orders order = new Orders();
         order.setUser(user);
@@ -56,7 +58,7 @@ public class OrderService {
         order.setOrderItems(orderItems);
         Orders saveOrder = orderRepository.save(order);
         return new OrderDTO(saveOrder.getId(), saveOrder.getTotalAmount(), saveOrder.getStatus(),
-                saveOrder.getOrderDate(),orderItemDTOS);
+                saveOrder.getOrderDate(), orderItemDTOS);
     }
 
     public List<OrderDTO> getAllOrder() {
@@ -66,25 +68,29 @@ public class OrderService {
 
     private OrderDTO convertToDTO(Orders orders) {
         List<OrderItemDTO> orderItem = orders.getOrderItems().stream()
-                .map(item-> new OrderItemDTO(
+                .map(item -> new OrderItemDTO(
                         item.getProduct().getName(),
                         item.getProduct().getPrice(),
-                        item.getQuantity())).collect(Collectors.toList());
+                        item.getQuantity()))
+                .collect(Collectors.toList());
         return new OrderDTO(orders.getId(),
                 orders.getTotalAmount(),
                 orders.getStatus(),
                 orders.getOrderDate(),
-                orders.getUser()!=null?orders.getUser().getName():"Unknown",
-                orders.getUser()!=null?orders.getUser().getEmail():"Unknown",
+                orders.getUser() != null ? orders.getUser().getName() : "Unknown",
+                orders.getUser() != null ? orders.getUser().getEmail() : "Unknown",
                 orderItem);
     }
 
-    public List<OrderDTO> getOrderByUser(Long userId) {
-        Optional<User> userOp = userRepository.findById(userId);
-        if(userOp.isEmpty()){
+    public List<OrderDTO> getOrderByUser(String email) {
+        // Optional<User> userOp = userRepository.findById(userId);
+        // if (userOp.isEmpty()) {
+        //     throw new RuntimeException("User Not Found");
+        // }
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
             throw new RuntimeException("User Not Found");
         }
-        User user = userOp.get();
         List<Orders> ordersList = orderRepository.findByUser(user);
         return ordersList.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
