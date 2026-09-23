@@ -1,90 +1,134 @@
-# 🛒 E-Commerce REST API Backend
+# 🛒 E-Commerce Backend Service
 
-A production-ready, modular E-Commerce RESTful Backend built with **Java 17**, **Spring Boot 3**, **Spring Security**, **JWT (JSON Web Tokens)**, and **MySQL/JPA**. 
-
-This system provides enterprise-grade user authentication, catalog management, shopping cart operations, and order processing with role-based access control (RBAC).
+A robust, monolithic Spring Boot REST API engineered to serve as the backend engine for an e-commerce platform. It provides enterprise-grade stateless authentication, role-based authorization, catalog exploration, dynamic shopping cart state management, and transactional order checkout with relational integrity.
 
 ---
 
-## 📑 Table of Contents
-1. [Key Features](#-key-features)
-2. [Tech Stack](#-tech-stack)
-3. [System Architecture](#-system-architecture)
-4. [Request & Authentication Flow](#-request--authentication-flow)
-5. [Database Entity-Relationship (ER) Overview](#-database-entity-relationship-er-overview)
-6. [API Endpoints Reference](#-api-endpoints-reference)
-7. [Project Directory Structure](#-project-directory-structure)
-8. [Getting Started & Local Setup](#-getting-started--local-setup)
-9. [Configuration](#-configuration)
-10. [Future Enhancements](#-future-enhancements)
+## 📌 Project Purpose
+
+The primary purpose of this service is to manage the end-to-end commerce lifecycle for an online marketplace. In production e-commerce environments, applications must maintain strict consistency across catalog stock, active user carts, and checkout operations while enforcing zero-trust API security. This application addresses these requirements by:
+
+1. **Securing Resources Statistically**: Implementing stateless JWT bearer token authentication and Role-Based Access Control (RBAC) across public endpoints, customer operations, and administrative dashboards.
+2. **Preventing Race Conditions at Checkout**: Enforcing `@Transactional` boundaries during order placement to ensure cart item conversion, stock decrementing, and order creation occur atomically.
+3. **Decoupling Data Representations**: Leveraging dedicated Data Transfer Objects (DTOs) and centralized global exception handling (`@RestControllerAdvice`) to prevent internal schema leakage and return standardized error payloads.
 
 ---
 
 ## 🚀 Key Features
 
-* **Stateless Authentication & Security**: Complete role-based access control (RBAC: `ROLE_CUSTOMER`, `ROLE_ADMIN`) powered by Spring Security and HMAC-signed JWT tokens.
-* **Product Catalog**: Full CRUD lifecycle for categories and products with inventory tracking and pagination/filtering support.
-* **Shopping Cart Engine**: Persistent shopping cart per user supporting dynamic quantity updates, pricing totals, and automatic cleanup.
-* **Order & Checkout Processing**: Atomic order creation from cart items with status management (`PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED`).
-* **Validation & Error Handling**: Centralized global exception handler (`@RestControllerAdvice`) returning standardized JSON error payloads.
-* **Database Management**: Hibernate / Spring Data JPA with transactional boundaries (`@Transactional`) ensuring data consistency.
+- **Stateless RBAC Security**: Granular endpoint authorization separating customer capabilities (`ROLE_CUSTOMER`) from administrative control (`ROLE_ADMIN`) using Spring Security and HMAC-signed JWTs.
+- **Transactional Order Placement**: Atomic checkout operations ensuring cart clearance and order record generation execute under strict database ACID guarantees.
+- **Relational Integrity & Cascading**: Uses JPA foreign keys (`@ManyToOne`, `@OneToMany`) to manage user-to-cart, cart-to-item, and order-to-order-item lifecycles without orphan anomalies.
+- **Centralized Validation & Exception Pipeline**: Custom exception hierarchies mapped to structured HTTP status codes (`400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`).
+- **Flexible Database Profile**: Zero-infrastructure development via embedded H2 support, with turnkey compatibility for production MySQL instances.
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Technologies Used
 
-| Technology | Purpose |
+- **Java 17**
+- **Spring Boot 3.x**
+  - Spring Web MVC (REST APIs & Controller Layer)
+  - Spring Security (Security Filter Chain & RBAC)
+  - Spring Data JPA (Data Access Layer & Hibernate ORM)
+  - Spring Boot Validation (Jakarta Bean Validation)
+- **JSON Web Tokens (jjwt)** (Stateless Token Generation & Parsing)
+- **MySQL / H2 Database** (Relational Persistence)
+- **Lombok** (Boilerplate Reduction)
+- **Maven** (Dependency & Build Lifecycle Management)
+
+---
+
+## 🏗 System Components
+
+The application adheres to a clean monolithic layered architecture enforcing strict separation of concerns:
+
+| Component | Responsibility |
 | :--- | :--- |
-| **Java 17+** | Core Programming Language |
-| **Spring Boot 3.x** | Application Framework & Dependency Injection |
-| **Spring Security** | Authentication, Authorization & Security Filters |
-| **JSON Web Tokens (jjwt)** | Stateless Bearer Token Authentication |
-| **Spring Data JPA (Hibernate)** | Object-Relational Mapping (ORM) & Database Abstraction |
-| **MySQL** | Production Relational Database |
-| **Lombok** | Boilerplate Reduction (Getters, Setters, Builders) |
-| **Maven** | Build Automation and Dependency Management |
+| **SecurityFilterChain & JwtFilter** | Intercepts all incoming HTTP traffic, parses `Bearer <token>` headers, validates JWT signatures, and injects authentication tokens into the `SecurityContextHolder`. |
+| **AuthController** | Exposes `/api/auth/register` and `/api/auth/login`, delegating credential validation to Spring Security's `AuthenticationManager`. |
+| **ProductController & CategoryController** | Exposes public catalog browsing while restricting mutation endpoints (`POST`, `PUT`, `DELETE`) strictly to authenticated administrators. |
+| **CartController & Service** | Manages user-specific shopping carts, item additions, quantity adjustments, and total price derivations. |
+| **OrderController & Service** | Handles transactional checkout execution, order history retrieval, and administrative shipment/order status updates. |
+| **GlobalExceptionHandler** | Intercepts framework and application-level exceptions, returning unified JSON response envelopes with distinct timestamps and error details. |
+| **Relational Repositories** | Spring Data JPA interfaces abstracting database operations with indexed queries and transactional integrity. |
 
 ---
 
-## 🏛 System Architecture
+## 📐 Architecture Diagram
 
-The project follows the standard **Layered Architecture (N-Tier)** design pattern to enforce separation of concerns, loose coupling, and maintainability:
+```mermaid
+flowchart TB
+    Client((External Client /\nFrontend / Postman))
 
-```text
-                  +-----------------------------------+
-                  |      Client / Frontend / Postman  |
-                  +-----------------+-----------------+
-                                    |
-                             HTTP / HTTPS
-                                    |
-                  +-----------------v-----------------+
-                  |       Servlet Filter Chain        |
-                  |  [JwtAuthenticationFilter / CORS] |
-                  +-----------------+-----------------+
-                                    |
-+-----------------------------------v-------------------------------------+
-| SPRING BOOT CONTAINER                                                   |
-|                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                     Controller Layer (REST APIs)                  |  |
-|  |   AuthController  |  ProductController  |  Cart/OrderController   |  |
-|  +---------------------------------+---------------------------------+  |
-|                                    |                                    |
-|                                    v                                    |
-|  +-------------------------------------------------------------------+  |
-|  |                   Service Layer (Business Logic)                  |  |
-|  |   AuthService     |  ProductService     |  Cart/OrderService      |  |
-|  +---------------------------------+---------------------------------+  |
-|                                    |                                    |
-|                                    v                                    |
-|  +-------------------------------------------------------------------+  |
-|  |               Repository Layer (Spring Data JPA / DAOs)           |  |
-|  |   UserRepository  |  ProductRepository  |  OrderRepository        |  |
-|  +---------------------------------+---------------------------------+  |
-+------------------------------------|------------------------------------+
-                                     |
-                             JDBC / Hibernate
-                                     |
-                  +------------------v----------------+
-                  |         MySQL Database            |
-                  +-----------------------------------+
+    subgraph Spring Boot Application [E-Commerce Backend]
+        subgraph Security Layer
+            JwtFilter[JwtAuthenticationFilter]
+            SecContext[(SecurityContextHolder)]
+        end
+
+        subgraph Controller Layer
+            AuthCtrl[AuthController]
+            ProdCtrl[ProductController]
+            CartCtrl[CartController]
+            OrderCtrl[OrderController]
+        end
+
+        subgraph Service Layer
+            AuthSvc[AuthService]
+            ProdSvc[ProductService]
+            CartSvc[CartService]
+            OrderSvc[OrderService]
+        end
+
+        subgraph Data Access Layer
+            UserRepo[UserRepository]
+            ProdRepo[ProductRepository]
+            CartRepo[CartRepository]
+            OrderRepo[OrderRepository]
+        end
+    end
+
+    DB[(MySQL / H2 Database)]
+
+    Client -- "HTTP Requests with Bearer JWT" --> JwtFilter
+    JwtFilter -- "1. Validate Claims & Set Auth" --> SecContext
+    JwtFilter -- "2. Dispatch Request" --> AuthCtrl & ProdCtrl & CartCtrl & OrderCtrl
+
+    AuthCtrl --> AuthSvc
+    ProdCtrl --> ProdSvc
+    CartCtrl --> CartSvc
+    OrderCtrl --> OrderSvc
+
+    AuthSvc --> UserRepo
+    ProdSvc --> ProdRepo
+    CartSvc --> CartRepo
+    OrderSvc --> OrderRepo
+
+    UserRepo -.-> DB
+    ProdRepo -.-> DB
+    CartRepo -.-> DB
+    OrderRepo -.-> DB
+
+sequenceDiagram
+    autonumber
+    actor User as Client
+    participant AuthCtrl as AuthController
+    participant AuthMgr as AuthenticationManager
+    participant JwtProv as JwtProvider
+    participant DB as Relational Database
+
+    User->>AuthCtrl: POST /api/auth/login {email, password}
+    AuthCtrl->>AuthMgr: authenticate(UsernamePasswordAuthenticationToken)
+    AuthMgr->>DB: Query User credentials by email
+    DB-->>AuthMgr: UserEntity with hashed password & roles
+    
+    alt Invalid Credentials
+        AuthMgr-->>AuthCtrl: BadCredentialsException
+        AuthCtrl-->>User: 401 Unauthorized
+    else Valid Credentials
+        AuthMgr-->>AuthCtrl: Authenticated Principal
+        AuthCtrl->>JwtProv: generateToken(userDetails)
+        JwtProv-->>AuthCtrl: Signed JWT Token String
+        AuthCtrl-->>User: 200 OK { token, type: "Bearer" }
+    end
