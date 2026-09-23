@@ -6,11 +6,10 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-Tokens-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
-A robust, enterprise-grade, scalable E-Commerce RESTful Backend engine built using **Java**, **Spring Boot 3**, **Spring Security 6**, **Spring Data JPA (Hibernate)**, and **MySQL**. 
+A foundational E-Commerce RESTful Backend engine built using **Java**, **Spring Boot**, **Spring Security**, **Spring Data JPA (Hibernate)**, and **MySQL**. 
 
-This system handles user identity and Role-Based Access Control (RBAC) via stateless JWT tokens, catalog navigation, shopping cart sessions, transactional checkout/order lifecycles, and inventory consistency with strict ACID guarantees.
+This system handles user identity and Role-Based Access Control (RBAC) via stateless JWT tokens, basic product catalog management, and simple order placement.
 
 ---
 
@@ -19,52 +18,31 @@ This system handles user identity and Role-Based Access Control (RBAC) via state
 - [Project Overview](#-project-overview)
 - [Core Features](#-core-features)
 - [System Architecture & Flow Diagrams](#-system-architecture--flow-diagrams)
-  - [1. High-Level Layered Architecture](#1-high-level-layered-architecture)
-  - [2. JWT Authentication & Security Lifecycle](#2-jwt-authentication--security-lifecycle)
-  - [3. Order Placement & Checkout Transaction Flow](#3-order-placement--checkout-transaction-flow)
-  - [4. Database Entity-Relationship (ER) Diagram](#4-database-entity-relationship-er-diagram)
-- [Detailed Architectural Topics & Flow Breakdown](#-detailed-architectural-topics--flow-breakdown)
-  - [Layer-by-Layer Walkthrough](#layer-by-layer-walkthrough)
-  - [Security & RBAC Enforcement](#security--rbac-enforcement)
-  - [Transactional Integrity & Concurrency](#transactional-integrity--concurrency)
-  - [Centralized Exception Handling & Validation](#centralized-exception-handling--validation)
 - [Tech Stack](#-tech-stack)
-- [API Endpoints Reference](#-api-endpoints-reference)
-- [Project Directory Structure](#-project-directory-structure)
-- [Getting Started & Local Setup](#-getting-started--local-setup)
-- [Configuration](#-configuration)
-- [Future Enhancements](#-future-enhancements)
-- [License](#-license)
 
 ---
 
 ## 🌟 Project Overview
 
-Modern e-commerce backends require strict separation of concerns, guaranteed database consistency, sub-second query execution, and high security. This application solves core e-commerce challenges:
+This application serves as a backend engine for an e-commerce platform, focusing on standard RESTful principles and security:
 
-- **Identity & Authorization:** Token-based stateless authentication preventing CSRF and enabling horizontal scalability.
-- **Inventory Consistency:** Preventing race conditions, double checkouts, and overselling during simultaneous customer purchases.
-- **Data Isolation:** Decoupling customer cart items from frozen order snapshots (pricing shifts do not alter historical orders).
-- **Clean Architecture:** Domain-Driven Layering (Controller → Service → Repository → Database) ensuring testability, maintainability, and reusability.
+- **Identity & Authorization:** Token-based stateless authentication using JWT.
+- **Data Persistence:** Relational database mapping using JPA & Hibernate.
+- **Clean Architecture:** Domain-Driven Layering (Controller → Service → Repository → Database).
 
 ---
 
 ## 🚀 Core Features
 
-- **Authentication & RBAC:** User registration, password encryption via BCrypt, JWT generation/validation, and roles (`ROLE_CUSTOMER`, `ROLE_ADMIN`).
-- **Product Catalog Management:** Category hierarchical grouping, multi-parameter search, pagination, sorting (by price, rating, date), and stock monitoring.
-- **Cart Management:** Dynamic addition, quantity update, stock pre-validation, and cart-clearing mechanisms tied to authenticated user sessions.
-- **Order Processing Engine:** Atomic checkout converting cart items into persistent order line snapshots with status tracking (`PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED`).
-- **Address & Profile Management:** Shipping/billing address management linked to user accounts.
-- **Robust Exception Handling:** Uniform API error response model with standard HTTP error codes, timestamping, and actionable validation messages.
+- **Authentication & RBAC:** User registration, password encryption via BCrypt, JWT generation/validation, and roles (`USER`, `ADMIN`).
+- **Product Catalog Management:** Basic CRUD operations to add, view, and delete products (restricted to ADMIN for modifications).
+- **Order Processing:** Checkout capabilities to convert requested product quantities into persistent order lines.
 
 ---
 
 ## 🏛️ System Architecture & Flow Diagrams
 
-### 1. High-Level Layered Architecture
-
-The following diagram illustrates how an incoming HTTP request travels through the system layers:
+### High-Level Layered Architecture
 
 ```mermaid
 graph TD
@@ -72,30 +50,26 @@ graph TD
     
     subgraph SpringBootApp["Spring Boot Application Context"]
         subgraph SecurityLayer["Security & Filter Chain"]
-            CORS["CORS & CSRF Filter"]
-            JWTFilter["JwtAuthenticationFilter"]
+            JWTFilter["JwtFilter"]
             AuthManager["AuthenticationManager / Provider"]
         end
         
         subgraph PresentationLayer["Controller / REST API Layer"]
-            AuthController["AuthController"]
+            UserController["UserController"]
             ProductController["ProductController"]
-            CartController["CartController"]
             OrderController["OrderController"]
-            GlobalExceptionHandler["@RestControllerAdvice (Exception Handler)"]
         end
         
         subgraph BusinessLayer["Service Layer (Business Logic)"]
-            AuthService["AuthService"]
+            UserService["UserService"]
             ProductService["ProductService"]
-            CartService["CartService"]
-            OrderService["OrderService (@Transactional)"]
+            OrderService["OrderService"]
+            CustomerUserDetailsService["CustomerUserDetailsService"]
         end
 
         subgraph PersistenceLayer["Data Access Layer (Spring Data JPA)"]
             UserRepo["UserRepository"]
             ProductRepo["ProductRepository"]
-            CartRepo["CartRepository"]
             OrderRepo["OrderRepository"]
         end
     end
@@ -104,25 +78,21 @@ graph TD
         MySQL[("MySQL Database Engine")]
     end
 
-    Client -->|HTTP / REST Request| CORS
-    CORS --> JWTFilter
+    Client -->|HTTP / REST Request| JWTFilter
     JWTFilter -->|Validate Token / Set SecurityContext| AuthManager
     JWTFilter --> PresentationLayer
     
-    AuthController --> AuthService
+    UserController --> UserService
     ProductController --> ProductService
-    CartController --> CartService
     OrderController --> OrderService
 
-    AuthService --> UserRepo
+    UserService --> UserRepo
     ProductService --> ProductRepo
-    CartService --> CartRepo
     OrderService --> OrderRepo
     OrderService --> ProductRepo
+    OrderService --> UserRepo
 
     UserRepo --> MySQL
     ProductRepo --> MySQL
-    CartRepo --> MySQL
     OrderRepo --> MySQL
-
-    GlobalExceptionHandler -.->|Intercepts & Normalizes Errors| Client
+```
