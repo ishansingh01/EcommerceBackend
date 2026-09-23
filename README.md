@@ -1,49 +1,90 @@
-# 🛒 E-Commerce RESTful Backend API
+# 🛒 E-Commerce REST API Backend
 
-A high-performance, robust, and scalable e-commerce backend built with **Java**, **Spring Boot**, **Spring Security with JWT**, and **Spring Data JPA**. This service powers core online retail functionality including user authentication, product catalog browsing, cart operations, order processing, and administrative inventory management.
+A production-ready, modular E-Commerce RESTful Backend built with **Java 17**, **Spring Boot 3**, **Spring Security**, **JWT (JSON Web Tokens)**, and **MySQL/JPA**. 
+
+This system provides enterprise-grade user authentication, catalog management, shopping cart operations, and order processing with role-based access control (RBAC).
 
 ---
 
 ## 📑 Table of Contents
 1. [Key Features](#-key-features)
 2. [Tech Stack](#-tech-stack)
-3. [System Architecture & Request Flow](#-system-architecture--request-flow)
-4. [Database Design & Entity Relationships](#-database-design--entity-relationships)
-5. [Project Structure](#-project-structure)
-6. [API Endpoints Overview](#-api-endpoints-overview)
-7. [Getting Started & Local Setup](#-getting-started--local-setup)
-8. [Configuration (`application.properties`)](#-configuration-applicationproperties)
-9. [Future Enhancements](#-future-enhancements)
+3. [System Architecture](#-system-architecture)
+4. [Request & Authentication Flow](#-request--authentication-flow)
+5. [Database Entity-Relationship (ER) Overview](#-database-entity-relationship-er-overview)
+6. [API Endpoints Reference](#-api-endpoints-reference)
+7. [Project Directory Structure](#-project-directory-structure)
+8. [Getting Started & Local Setup](#-getting-started--local-setup)
+9. [Configuration](#-configuration)
+10. [Future Enhancements](#-future-enhancements)
 
 ---
 
-## ✨ Key Features
+## 🚀 Key Features
 
-- **Authentication & Authorization**: Stateless JWT (JSON Web Token) authentication with role-based access control (`ROLE_CUSTOMER`, `ROLE_ADMIN`).
-- **Product & Category Management**: Dynamic catalog searching, category filtering, pagination, and sorting.
-- **Shopping Cart Lifecycle**: Add, update quantity, and remove items with real-time price tallying.
-- **Order & Checkout Processing**: Cart-to-order transition with stock validation and transaction consistency.
-- **Data Validation & Error Handling**: Global exception handling (`@RestControllerAdvice`) delivering uniform error envelopes.
-- **Relational Integrity**: Complete JPA/Hibernate entity relationships with transactional boundaries (`@Transactional`).
+* **Stateless Authentication & Security**: Complete role-based access control (RBAC: `ROLE_CUSTOMER`, `ROLE_ADMIN`) powered by Spring Security and HMAC-signed JWT tokens.
+* **Product Catalog**: Full CRUD lifecycle for categories and products with inventory tracking and pagination/filtering support.
+* **Shopping Cart Engine**: Persistent shopping cart per user supporting dynamic quantity updates, pricing totals, and automatic cleanup.
+* **Order & Checkout Processing**: Atomic order creation from cart items with status management (`PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED`).
+* **Validation & Error Handling**: Centralized global exception handler (`@RestControllerAdvice`) returning standardized JSON error payloads.
+* **Database Management**: Hibernate / Spring Data JPA with transactional boundaries (`@Transactional`) ensuring data consistency.
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Language:** Java 17+
-- **Framework:** Spring Boot 3.x
-  - **Spring Web** (RESTful API development)
-  - **Spring Security** (Security filter chains & authorization)
-  - **Spring Data JPA** (Data persistence with Hibernate ORM)
-- **Token Management:** `jjwt` (Java JWT library)
-- **Database:** MySQL 8 / PostgreSQL (H2 Database for local integration testing)
-- **Build Tool:** Apache Maven
-- **Utilities:** Lombok, ModelMapper / MapStruct
+| Technology | Purpose |
+| :--- | :--- |
+| **Java 17+** | Core Programming Language |
+| **Spring Boot 3.x** | Application Framework & Dependency Injection |
+| **Spring Security** | Authentication, Authorization & Security Filters |
+| **JSON Web Tokens (jjwt)** | Stateless Bearer Token Authentication |
+| **Spring Data JPA (Hibernate)** | Object-Relational Mapping (ORM) & Database Abstraction |
+| **MySQL** | Production Relational Database |
+| **Lombok** | Boilerplate Reduction (Getters, Setters, Builders) |
+| **Maven** | Build Automation and Dependency Management |
 
 ---
 
-## 🏗 System Architecture & Request Flow
+## 🏛 System Architecture
 
-The system is designed following the standard **Controller-Service-Repository** layered pattern with an intercepted security filter chain.
+The project follows the standard **Layered Architecture (N-Tier)** design pattern to enforce separation of concerns, loose coupling, and maintainability:
 
-### Layered Architecture Flow
+```text
+                  +-----------------------------------+
+                  |      Client / Frontend / Postman  |
+                  +-----------------+-----------------+
+                                    |
+                             HTTP / HTTPS
+                                    |
+                  +-----------------v-----------------+
+                  |       Servlet Filter Chain        |
+                  |  [JwtAuthenticationFilter / CORS] |
+                  +-----------------+-----------------+
+                                    |
++-----------------------------------v-------------------------------------+
+| SPRING BOOT CONTAINER                                                   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                     Controller Layer (REST APIs)                  |  |
+|  |   AuthController  |  ProductController  |  Cart/OrderController   |  |
+|  +---------------------------------+---------------------------------+  |
+|                                    |                                    |
+|                                    v                                    |
+|  +-------------------------------------------------------------------+  |
+|  |                   Service Layer (Business Logic)                  |  |
+|  |   AuthService     |  ProductService     |  Cart/OrderService      |  |
+|  +---------------------------------+---------------------------------+  |
+|                                    |                                    |
+|                                    v                                    |
+|  +-------------------------------------------------------------------+  |
+|  |               Repository Layer (Spring Data JPA / DAOs)           |  |
+|  |   UserRepository  |  ProductRepository  |  OrderRepository        |  |
+|  +---------------------------------+---------------------------------+  |
++------------------------------------|------------------------------------+
+                                     |
+                             JDBC / Hibernate
+                                     |
+                  +------------------v----------------+
+                  |         MySQL Database            |
+                  +-----------------------------------+
